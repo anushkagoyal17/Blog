@@ -25,7 +25,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'email', 'first_name', 'last_name', 'username', 'password']
+        fields = ['id', 'email', 'first_name', 'last_name', 'username', 'password', 'is_verified']
         extra_kwargs = {
             'password': {'write_only': True}
         }
@@ -69,3 +69,7 @@ class UserSerializer(serializers.ModelSerializer):
             )
         return attrs
 
+
+class VerifyAccountSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    otp = serializers.CharField()
