@@ -1,7 +1,8 @@
 import re, logging
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from .models import User
+from .models import User, Blog
 from rest_framework import serializers
+
 
 logger = logging.getLogger('django')
 
@@ -25,7 +26,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'email', 'first_name', 'last_name', 'username', 'password', 'is_verified']
+        fields = ('id', 'email', 'first_name', 'last_name', 'username', 'password', 'is_verified',)
         extra_kwargs = {
             'password': {'write_only': True}
         }
@@ -73,3 +74,11 @@ class UserSerializer(serializers.ModelSerializer):
 class VerifyAccountSerializer(serializers.Serializer):
     email = serializers.EmailField()
     otp = serializers.CharField()
+
+
+class BlogSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Blog
+        fields = '__all__'
+        read_only_fields = ['user']
+

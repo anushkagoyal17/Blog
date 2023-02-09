@@ -1,3 +1,4 @@
+import os
 from datetime import timedelta
 from pathlib import Path
 
@@ -72,7 +73,7 @@ DATABASES = {
         # 'NAME': BASE_DIR / 'db.sqlite3',
 
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'blog_db', 
+        'NAME': 'blogs', 
         'USER': 'admin', 
         'PASSWORD': 'admin',
         'HOST': '127.0.0.1', 
@@ -159,3 +160,8 @@ EMAIL_USE_TLS = True
 EMAIL_PORT = 587
 EMAIL_HOST_USER = 'anushka.codetrade@gmail.com'
 EMAIL_HOST_PASSWORD = 'dtnwixddjmklhyjg'
+
+MEDIA_ROOT = os.path.join(BASE_DIR, 'files')
+
+MEDIA_URL = '/files/'
+

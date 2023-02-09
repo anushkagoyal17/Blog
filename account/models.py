@@ -77,3 +77,18 @@ class User(AbstractUser):
         "Is the user a member of staff?"
         # Simplest possible answer: All admins are staff
         return self.is_superuser
+
+
+class Blog(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    blog_title = models.CharField(max_length=255)
+    blog_image = models.ImageField(upload_to='sample_blog_images', height_field=None, width_field=None, max_length=100, null=True, blank=True)
+    blog_content = models.TextField(null=True, blank=True)
+    publish_choices = (
+        ('Yes', 'Published'),
+        ('No', 'Draft'),
+    )
+    is_published = models.CharField(max_length=255, blank=True, choices=publish_choices)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    published_at = models.DateTimeField(null=True, blank=True)

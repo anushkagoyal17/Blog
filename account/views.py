@@ -1,15 +1,17 @@
-import logging
+import logging, datetime
 from django.shortcuts import render
-from rest_framework.generics import GenericAPIView
+from rest_framework.generics import GenericAPIView, ListCreateAPIView
 from account.renderers import UserRenderer
-from .models import User
+from .models import User, Blog
 from rest_framework.response import Response
-from .serializers import UserSerializer, CustomTokenObtainPairSerializer, VerifyAccountSerializer
-from rest_framework import status
+from .serializers import UserSerializer, CustomTokenObtainPairSerializer, \
+VerifyAccountSerializer, BlogSerializer
+from rest_framework import status, serializers
 from django.contrib.auth import authenticate
 from django.utils.http import urlsafe_base64_encode
 from django.utils.encoding import force_bytes
 from .emails import send_otp_via_mail
+from rest_framework.permissions import IsAuthenticated
 
 
 logger = logging.getLogger('django')
@@ -109,4 +111,110 @@ class VerifyOTP(GenericAPIView):
                     'message' : 'Failed',
                     'data' : serializer.errors,
                 })  
+
+
+class CreateNewBlog(GenericAPIView):
+    renderer_classes = (UserRenderer,)
+    permission_classes = (IsAuthenticated,)
+    serializer_class = BlogSerializer
+
+    def get(self, request, format=None):
+        try:
+            blogs = Blog.objects.filter(user=request.user)
+            serializer = self.serializer_class(blogs, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            logger.error(e)
+            return Response(str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def post(self, request, format=None):
+        try:
+            data = request.data
+            title_list = Blog.objects.filter(user=request.user).values_list('blog_title', flat=True)
+            blog_title = request.data.get('blog_title')
+            if blog_title:
+                if blog_title in title_list:
+                    return Response({"Error": "You've already a blog with this title!"}, status=status.HTTP_404_NOT_FOUND)
+                blog_image = request.data.get('blog_image')
+                blog_content = request.data.get('blog_content')
+                is_published = request.data.get('is_published')
+                
+                context = {
+                    'blog_title': blog_title,
+                    'blog_image': blog_image,
+                    'blog_content': blog_content,
+                    'is_published': is_published,
+                    # 'username': username,
+                }
+                if is_published == 'Yes':
+                    data['published_at'] = context['published_at'] = datetime.datetime.now()
+                serializer = self.serializer_class(data=request.data, context=context)
+                serializer.is_valid(raise_exception=True)
+                serializer.save(user=self.request.user)
+                return Response({'msg': 'Your blog is created'},
+                                status=status.HTTP_201_CREATED)
+            else:
+                return Response({'msg': 'There must be a title for your blog.'},
+                                status=status.HTTP_201_CREATED)
+        except Exception as e:
+            logger.error(e)
+            return Response(str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def put(self, request, blog_id, format=None):
+        try:
+            blog = Blog.objects.get(id=blog_id)
+            if Blog.objects.filter(user=request.user).exists():
+                data = request.data
+                title_list = Blog.objects.filter(user=request.user).values_list('blog_title', flat=True)
+                blog_title = request.POST.get('blog_title')
+                if blog_title in title_list:
+                    return Response({"Error": "You've already a blog with this title!"}, status=status.HTTP_404_NOT_FOUND)
+                blog_image = request.POST.get('blog_image')
+                blog_content = request.POST.get('blog_content')
+                is_published = request.POST.get('is_published')
+                
+                context = {
+                    'blog_title': blog_title,
+                    'blog_image': blog_image,
+                    'blog_content': blog_content,
+                    'is_published': is_published,
+                    # 'username': username,
+                    'blog_id': blog_id,
+                }
+                if is_published == 'Yes':
+                    data['published_at'] = context['published_at'] = datetime.datetime.now()
+                
+                serializer = BlogSerializer(blog, data=request.data, context=context, partial=True)
+                serializer.is_valid(raise_exception=True)
+                serializer.save(user=self.request.user)
+                return Response({'msg': 'Blog updated successfully.'},
+                                status=status.HTTP_201_CREATED)
+        except Exception as e:
+            logger.error(e)
+            return Response(str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def delete(self, request, blog_id, format=None):
+        
+        if Blog.objects.filter(id=blog_id).exists():
+            Blog.objects.get(id=blog_id).delete()
+        else:
+            raise serializers.ValidationError(
+                "Blog doesn't exist")
+
+        return Response({"Result": "Blog is deleted"}, status=status.HTTP_204_NO_CONTENT)
+
+
+class PublishedBlogsView(GenericAPIView):
+    renderer_classes = (UserRenderer,)
+    # permission_classes = (IsAuthenticated,)
+    serializer_class = BlogSerializer
+    print('hola')
+
+    def get(self, request, format=None):
+        user = request.user
+        print('i m also')
+        import pdb; pdb.set_trace()
+        blogs = Blog.objects.all()
+        serializer = BlogSerializer(blogs, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
