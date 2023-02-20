@@ -5,13 +5,14 @@ from account.renderers import UserRenderer
 from .models import User, Blog
 from rest_framework.response import Response
 from .serializers import UserSerializer, CustomTokenObtainPairSerializer, \
-VerifyAccountSerializer, BlogSerializer
+VerifyAccountSerializer, BlogSerializer, ChangePasswordSerializer, ForgetPasswordSerializer
 from rest_framework import status, serializers
 from django.contrib.auth import authenticate
 from django.utils.http import urlsafe_base64_encode
 from django.utils.encoding import force_bytes
-from .emails import send_otp_via_mail
+from .emails import send_otp_via_mail, password_reset_mail
 from rest_framework.permissions import IsAuthenticated
+from django.contrib.auth.tokens import PasswordResetTokenGenerator
 
 
 logger = logging.getLogger('django')
@@ -208,13 +209,56 @@ class PublishedBlogsView(GenericAPIView):
     renderer_classes = (UserRenderer,)
     # permission_classes = (IsAuthenticated,)
     serializer_class = BlogSerializer
-    print('hola')
 
     def get(self, request, format=None):
-        user = request.user
-        print('i m also')
-        import pdb; pdb.set_trace()
-        blogs = Blog.objects.all()
+        blogs = Blog.objects.filter(is_published='Yes')
         serializer = BlogSerializer(blogs, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response({'blogs':serializer.data}, status=status.HTTP_200_OK)
 
+
+class UserForgetPassword(GenericAPIView):
+    renderer_classes = (UserRenderer,)
+    serializer_class = ForgetPasswordSerializer
+
+    def post(self, request, format=None):
+        try:
+            # import pdb; pdb.set_trace()
+            email = request.data.get('email')
+            serializer = self.serializer_class(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            # serializer.save()
+
+            if User.objects.filter(email=email).exists():
+                # user = User.objects.get(email=email)
+                # uid = user.id
+                uid = urlsafe_base64_encode(force_bytes(user.id))
+                user = User.objects.get(email=email)
+                token = PasswordResetTokenGenerator().make_token(user)
+                password_reset_mail(serializer.data['email'], token, uid)
+            return Response({'msg': f'Password Reset URL is sent to your email {email}.'},
+                            status=status.HTTP_201_CREATED)
+        except Exception as e:
+            logger.error(e)
+            return Response(str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+
+class ResetPassword(GenericAPIView):
+    renderer_classes = (UserRenderer,)
+    serializer_class = ChangePasswordSerializer
+
+    def post(self, request, uid, token, format=None):
+        import pdb; pdb.set_trace()
+        # password = request.data.get('password')
+        # # password1 = request.data.get('password2')
+        # user = request.user
+        
+        # serializer = self.serializer_class(data=request.data)
+        # serializer.is_valid(raise_exception=True)
+        # user.set_password(password)
+        # user.save()
+        # return Response({'msg': 'Password Reset Successfully'}, status=status.HTTP_201_CREATED)
+        self.http_method_names.append("GET")
+        serializer = self.serializer_class(data=request.data, context={'uid': uid, 'token': token})
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({'msg': 'Password Reset Successfully'}, status=status.HTTP_201_CREATED)

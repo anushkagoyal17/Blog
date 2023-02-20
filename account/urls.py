@@ -1,6 +1,6 @@
 from django.urls import path
 from .views import UserRegistrationView, UserLoginView, VerifyOTP, CreateNewBlog, \
-PublishedBlogsView
+PublishedBlogsView, UserForgetPassword, ResetPassword
 
 
 urlpatterns = [
@@ -14,6 +14,9 @@ urlpatterns = [
     path('delete-blog/<int:blog_id>/', CreateNewBlog.as_view(), name='delete-blog'),
     # path('view-blog/', CreateNewBlog.as_view(), name='view-blog'),
     path('home/', PublishedBlogsView.as_view()),
+    path('forget-password/', UserForgetPassword.as_view(), name='forget-password'),
+    # path('reset-password/', ResetPassword.as_view(), name='reset-password'),
+    
 
     # path('<str:username>/', CreateNewBlog.as_view()),
     # path('<str:username>/blogs/', CreateNewBlog.as_view()),

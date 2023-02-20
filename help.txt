@@ -1,2 +1,5 @@
 Token Password for GitHub-
-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
+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
+
+For FE-
+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
