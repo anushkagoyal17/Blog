@@ -92,3 +92,6 @@ class Blog(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     published_at = models.DateTimeField(null=True, blank=True)
+
+    keywords = models.CharField(max_length=255, blank=True, null=True)
+    metadata = models.CharField(max_length=150, blank=True, null=True)

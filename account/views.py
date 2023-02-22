@@ -74,6 +74,9 @@ class UserLoginView(GenericAPIView):
 
 
 class VerifyOTP(GenericAPIView):
+    '''
+    OTP Verification after User Registered.
+    '''
     def post(self, request):
         try:
             data = request.data
@@ -120,6 +123,9 @@ class CreateNewBlog(GenericAPIView):
     serializer_class = BlogSerializer
 
     def get(self, request, format=None):
+        '''
+        List all blogs of logged-in user
+        '''
         try:
             blogs = Blog.objects.filter(user=request.user)
             serializer = self.serializer_class(blogs, many=True)
@@ -129,6 +135,9 @@ class CreateNewBlog(GenericAPIView):
             return Response(str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def post(self, request, format=None):
+        '''
+        Create new blog
+        '''
         try:
             data = request.data
             title_list = Blog.objects.filter(user=request.user).values_list('blog_title', flat=True)
@@ -139,12 +148,16 @@ class CreateNewBlog(GenericAPIView):
                 blog_image = request.data.get('blog_image')
                 blog_content = request.data.get('blog_content')
                 is_published = request.data.get('is_published')
+                keywords = request.data.get('keywords')
+                metadata = request.data.get('metadata')
                 
                 context = {
                     'blog_title': blog_title,
                     'blog_image': blog_image,
                     'blog_content': blog_content,
                     'is_published': is_published,
+                    'keywords': keywords,
+                    'metadata': metadata,
                     # 'username': username,
                 }
                 if is_published == 'Yes':
@@ -162,6 +175,9 @@ class CreateNewBlog(GenericAPIView):
             return Response(str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def put(self, request, blog_id, format=None):
+        '''
+        Update blog 
+        '''
         try:
             blog = Blog.objects.get(id=blog_id)
             if Blog.objects.filter(user=request.user).exists():
@@ -173,6 +189,8 @@ class CreateNewBlog(GenericAPIView):
                 blog_image = request.POST.get('blog_image')
                 blog_content = request.POST.get('blog_content')
                 is_published = request.POST.get('is_published')
+                keywords = request.POST.get('keywords')
+                metadata = request.POST.get('metadata')
                 
                 context = {
                     'blog_title': blog_title,
@@ -181,6 +199,8 @@ class CreateNewBlog(GenericAPIView):
                     'is_published': is_published,
                     # 'username': username,
                     'blog_id': blog_id,
+                    'keywords': keywords,
+                    'metadata': metadata,
                 }
                 if is_published == 'Yes':
                     data['published_at'] = context['published_at'] = datetime.datetime.now()
@@ -195,7 +215,9 @@ class CreateNewBlog(GenericAPIView):
             return Response(str(e), status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def delete(self, request, blog_id, format=None):
-        
+        '''
+        Delete blog
+        '''
         if Blog.objects.filter(id=blog_id).exists():
             Blog.objects.get(id=blog_id).delete()
         else:
@@ -204,6 +226,24 @@ class CreateNewBlog(GenericAPIView):
 
         return Response({"Result": "Blog is deleted"}, status=status.HTTP_204_NO_CONTENT)
 
+class UserFullBlog(GenericAPIView):
+    renderer_classes = (UserRenderer,)
+    permission_classes = (IsAuthenticated,)
+    serializer_class = BlogSerializer
+
+    def get(self, request, format=None):
+        '''
+        Get full blog 
+        '''
+        blog_id = self.request.query_params.get('blog_id')
+        if Blog.objects.filter(is_published='Yes', id=blog_id).exists():
+            blog = Blog.objects.get(id=blog_id)
+            serializer = BlogSerializer(blog)
+            return Response({'blog':serializer.data}, status=status.HTTP_200_OK)
+        else:
+            raise serializers.ValidationError(
+                "Blog doesn't exist")
+
 
 class PublishedBlogsView(GenericAPIView):
     renderer_classes = (UserRenderer,)
@@ -211,6 +251,9 @@ class PublishedBlogsView(GenericAPIView):
     serializer_class = BlogSerializer
 
     def get(self, request, format=None):
+        '''
+        All published blogs from any user
+        '''
         blogs = Blog.objects.filter(is_published='Yes')
         serializer = BlogSerializer(blogs, many=True)
         return Response({'blogs':serializer.data}, status=status.HTTP_200_OK)
