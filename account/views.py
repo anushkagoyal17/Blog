@@ -150,7 +150,17 @@ class CreateNewBlog(GenericAPIView):
                 is_published = request.data.get('is_published')
                 keywords = request.data.get('keywords')
                 metadata = request.data.get('metadata')
+                # import pdb;pdb.set_trace()
+                contributor = request.data.get('contributor')
+
+                if contributor == request.user.email:
+                    return Response({'msg': "You can't make yourself a contributer"}, status=status.HTTP_201_CREATED)
                 
+                if contributor != User.objects.get(email=contributor).email:
+                    return Response({'msg': 'Unkonwn user.'}, status=status.HTTP_201_CREATED)
+                
+                
+
                 context = {
                     'blog_title': blog_title,
                     'blog_image': blog_image,
@@ -158,6 +168,7 @@ class CreateNewBlog(GenericAPIView):
                     'is_published': is_published,
                     'keywords': keywords,
                     'metadata': metadata,
+                    'contributor': contributor,
                     # 'username': username,
                 }
                 if is_published == 'Yes':
@@ -179,19 +190,49 @@ class CreateNewBlog(GenericAPIView):
         Update blog 
         '''
         try:
+            import pdb; pdb.set_trace()
             blog = Blog.objects.get(id=blog_id)
-            if Blog.objects.filter(user=request.user).exists():
+            if Blog.objects.filter(user=request.user).exists() or \
+                Blog.objects.filter(contributor=request.user):
                 data = request.data
                 title_list = Blog.objects.filter(user=request.user).values_list('blog_title', flat=True)
-                blog_title = request.POST.get('blog_title')
+                blog_title = request.data.get('blog_title')
                 if blog_title in title_list:
                     return Response({"Error": "You've already a blog with this title!"}, status=status.HTTP_404_NOT_FOUND)
-                blog_image = request.POST.get('blog_image')
-                blog_content = request.POST.get('blog_content')
-                is_published = request.POST.get('is_published')
-                keywords = request.POST.get('keywords')
-                metadata = request.POST.get('metadata')
+                blog_image = request.data.get('blog_image')
+                blog_content = request.data.get('blog_content')
+                is_published = request.data.get('is_published')
+
+                keywords = request.data.get('keywords')
+                metadata = request.data.get('metadata')
+
+                contributor = request.data.get('contributor')
+                rmv_contributor = request.data.get('rmv_contributor')
                 
+                if Blog.objects.filter(contributor=request.user) and (contributor or rmv_contributor):
+                    return Response({'msg': "You can't update contributor settings!"},
+                                status=status.HTTP_201_CREATED)
+                '''
+                To remove contributor
+                '''
+                if rmv_contributor:
+                    blog = Blog.objects.get(id=blog_id)
+                    blog.contributor = ''
+                    blog.save()
+                    return Response({'msg': 'Removed your blog contributor.'},
+                                status=status.HTTP_201_CREATED)
+                else:
+                    if 'contributor' in data.keys():
+                        current_contributor = Blog.objects.get(id=blog_id).contributor
+                        if current_contributor:
+                            return Response({'msg': f"You can add only one contributer per blog. {current_contributor} is your contributer, pls remove them to replace new one"}, status=status.HTTP_201_CREATED)
+                            
+                        if contributor == request.user.email:
+                            return Response({'msg': "You can't make yourself a contributer"}, status=status.HTTP_201_CREATED)
+                        
+                        if contributor != User.objects.get(email=contributor).email:
+                            return Response({'msg': 'Unkonwn user.'}, status=status.HTTP_201_CREATED)
+                    
                 context = {
                     'blog_title': blog_title,
                     'blog_image': blog_image,
@@ -201,6 +242,7 @@ class CreateNewBlog(GenericAPIView):
                     'blog_id': blog_id,
                     'keywords': keywords,
                     'metadata': metadata,
+                    'contributor': contributor,
                 }
                 if is_published == 'Yes':
                     data['published_at'] = context['published_at'] = datetime.datetime.now()
@@ -242,7 +284,7 @@ class UserFullBlog(GenericAPIView):
             return Response({'blog':serializer.data}, status=status.HTTP_200_OK)
         else:
             raise serializers.ValidationError(
-                "Blog doesn't exist")
+                "Blog isn't published yet")
 
 
 class PublishedBlogsView(GenericAPIView):
@@ -305,3 +347,28 @@ class ResetPassword(GenericAPIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response({'msg': 'Password Reset Successfully'}, status=status.HTTP_201_CREATED)
+
+
+class BlogContributer(GenericAPIView):
+    renderer_classes = (UserRenderer,)
+    permission_classes = (IsAuthenticated,)
+    serializer_class = BlogSerializer
+
+    def get(self, request, format=None):
+        '''
+        To get blog contributer
+        '''
+        pass
+
+    def post(self, request, format=None):
+        '''
+        To add blog contributer
+        '''
+        contributer = request.data.get('contributer')
+        
+
+    def delete(self, request, format=None):
+        '''
+        To remove blog contributer
+        '''
+        pass

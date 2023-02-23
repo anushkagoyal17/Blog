@@ -95,3 +95,6 @@ class Blog(models.Model):
 
     keywords = models.CharField(max_length=255, blank=True, null=True)
     metadata = models.CharField(max_length=150, blank=True, null=True)
+
+    contributor = models.EmailField(max_length=255, blank=True, null=True)
+    rmv_contributor = models.BooleanField(default=False)
